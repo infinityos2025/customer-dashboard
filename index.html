@@ -1,0 +1,113 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Customer Dashboard</title>
+  <style>
+    body { font-family: Arial; margin: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+    th, td { padding: 8px; border: 1px solid #ccc; }
+    th { background-color: #f2f2f2; }
+    input, select { padding: 5px; width: 180px; margin-right: 10px; }
+    button { padding: 6px 12px; }
+  </style>
+</head>
+<body>
+
+  <h2>Add New Customer</h2>
+  <form id="add-form">
+    <input type="text" name="name" placeholder="Customer Name" required>
+    <input type="tel" name="whatsapp" placeholder="WhatsApp Number (e.g. 91843...)" required>
+    <input type="date" name="visit_date" required>
+    <input type="number" name="amount" placeholder="Amount Spent" required>
+    <select name="member" required>
+      <option value="Yes">Member</option>
+      <option value="No">Non-Member</option>
+    </select>
+    <button type="submit">Save Customer</button>
+  </form>
+
+  <h2>Customer List</h2>
+  <table id="customerTable">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>WhatsApp</th>
+        <th>Contacted</th>
+        <th>Last Visit</th>
+        <th>Amount</th>
+        <th>Member</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    const scriptUrl = "https://script.google.com/macros/s/AKfycbxss-2ZYyvFEZsSbZc0vUgAZXK5EWPWjfr2qpWCrQUQyUrSloozwq8f4N1xobepYEFQ/exec";
+
+    document.getElementById("add-form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const form = e.target;
+      const data = {
+        name: form.name.value,
+        whatsapp: form.whatsapp.value,
+        contacted: "No",
+        visit_date: form.visit_date.value,
+        amount: form.amount.value,
+        member: form.member.value
+      };
+
+      fetch(scriptUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "add", data })
+      })
+      .then(res => res.text())
+      .then(response => {
+        alert("Saved: " + response);
+        form.reset();
+        loadCustomers();
+      })
+      .catch(err => alert("Error: " + err));
+    });
+
+    function loadCustomers() {
+      fetch(scriptUrl)
+        .then(res => res.json())
+        .then(rows => {
+          const tbody = document.querySelector("#customerTable tbody");
+          tbody.innerHTML = "";
+          rows.forEach(row => {
+            const [name, whatsapp, contacted, visit, amount, member] = row;
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${name}</td>
+              <td>${whatsapp}</td>
+              <td>${contacted}</td>
+              <td>${visit}</td>
+              <td>${amount}</td>
+              <td>${member}</td>
+              <td><button onclick="sendWhatsApp('${name}', '${whatsapp}')">Send WhatsApp</button></td>
+            `;
+            tbody.appendChild(tr);
+          });
+        });
+    }
+
+    function sendWhatsApp(name, number) {
+      const msg = `Hi ${name}, thank you for visiting us!`;
+      const url = `https://wa.me/${number}?text=${encodeURIComponent(msg)}`;
+      window.open(url, "_blank");
+
+      fetch(scriptUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "mark_contacted", name, whatsapp: number })
+      }).then(() => loadCustomers());
+    }
+
+    loadCustomers();
+  </script>
+</body>
+</html>
